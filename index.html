@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Nan u Döner — POS</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --maroon: #7B1C2A;
+    --maroon-dark: #5A1220;
+    --maroon-light: #A02535;
+    --accent: #E8A020;
+    --accent-dark: #C07010;
+    --bg: #1A1A1A;
+    --surface: #242424;
+    --surface2: #2E2E2E;
+    --surface3: #383838;
+    --text: #F0F0F0;
+    --text-dim: #A0A0A0;
+    --success: #2E7D32;
+    --danger: #C62828;
+    --info: #0277BD;
+    --purple: #5E35B1;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+
+  html, body { height: 100%; background: radial-gradient(900px circle at 85% 0%, rgba(160,37,53,0.30), transparent 60%), radial-gradient(700px circle at 0% 100%, rgba(232,160,32,0.12), transparent 55%), #141212; background-attachment: fixed; color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; }
+  #menu-panel, #category-bar, #search-bar { background: transparent; }
+  .menu-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.55); }
+
+  /* ─── HEADER ─── */
+  #app-header { height: 56px; background: var(--maroon-dark); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); flex-shrink: 0; z-index: 10; }
+  .brand-container { display: flex; align-items: center; gap: 10px; }
+  .brand-logo { height: 36px; width: 36px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+  #app-header .brand { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; color: var(--accent); }
+  #app-header .brand span { color: var(--text); }
+  .header-btns { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .header-btns::-webkit-scrollbar { display: none; }
+  .hbtn { padding: 7px 14px; border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.15s; white-space: nowrap; }
+  .hbtn:active { opacity: 0.75; }
+  .hbtn-admin { background: var(--surface3); color: var(--text); }
+  .hbtn-sales { background: var(--accent); color: #1a1a1a; }
+  .hbtn-export { background: var(--success); color: white; }
+  .hbtn-expenses { background: var(--purple); color: white; }
+  .hbtn-calendar { background: var(--info); color: white; }
+
+  /* ─── LAYOUT ─── */
+  #layout { display: flex; height: calc(100vh - 56px); overflow: hidden; }
+
+  /* ─── LEFT: MENU ─── */
+  #menu-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  #category-bar { display: flex; gap: 8px; padding: 10px 12px; overflow-x: auto; background: var(--surface); flex-shrink: 0; scrollbar-width: none; }
+  #category-bar::-webkit-scrollbar { display: none; }
+  .cat-btn { padding: 8px 18px; border: 2px solid var(--maroon); border-radius: 50px; background: transparent; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .cat-btn.active { background: var(--maroon); color: var(--text); }
+  .cat-btn:active { transform: scale(0.96); }
+
+  #search-bar { padding: 8px 12px; background: var(--surface); flex-shrink: 0; }
+  #search-input { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--surface3); border-radius: var(--radius-sm); color: var(--text); font-size: 0.95rem; outline: none; -webkit-appearance: none; }
+  #search-input::placeholder { color: var(--text-dim); }
+  #search-input:focus { border-color: var(--maroon-light); }
+
+  #menu-grid { flex: 1; overflow-y: auto; padding: 10px 12px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap: 10px; align-content: start; -webkit-overflow-scrolling: touch; }
+  #menu-grid::-webkit-scrollbar { width: 4px; }
+  #menu-grid::-webkit-scrollbar-track { background: transparent; }
+  #menu-grid::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+  .menu-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; box-shadow: var(--shadow); border: 2px solid transparent; -webkit-tap-highlight-color: transparent; }
+  .menu-card:active { transform: scale(0.95); border-color: var(--maroon-light); }
+  .menu-card.in-cart { border-color: var(--maroon); }
+  .card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; background: var(--surface2); }
+  .card-img-placeholder { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; background: linear-gradient(135deg, var(--maroon-dark), var(--surface2)); }
+  .card-body { padding: 8px 10px 10px; }
+  .card-name { font-size: 0.85rem; font-weight: 600; line-height: 1.3; margin-bottom: 4px; color: var(--text); }
+  .card-price { font-size: 0.9rem; font-weight: 700; color: var(--accent); }
+  .card-badge { display: inline-block; background: var(--maroon); color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 50px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  /* ─── RIGHT: CART ─── */
+  #cart-panel { width: 340px; min-width: 280px; max-width: 380px; background: var(--surface); border-left: 1px solid var(--surface3); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+  #cart-header { padding: 12px 16px; background: var(--maroon-dark); font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  #cart-count-badge { background: var(--accent); color: #1a1a1a; border-radius: 50px; padding: 2px 10px; font-size: 0.8rem; font-weight: 700; }
+  #cart-items { flex: 1; overflow-y: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
+  #cart-items::-webkit-scrollbar { width: 4px; }
+  #cart-items::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
+
+  .cart-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); font-size: 0.9rem; gap: 8px; }
+  .cart-empty-icon { font-size: 2.5rem; opacity: 0.4; }
+  .cart-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .ci-info { flex: 1; min-width: 0; }
+  .ci-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ci-price { font-size: 0.8rem; color: var(--accent); }
+  .ci-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .qty-btn { width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; transition: opacity 0.1s; -webkit-tap-highlight-color: transparent; }
+  .qty-btn:active { opacity: 0.7; }
+  .qty-minus { background: var(--surface3); color: var(--text); }
+  .qty-plus { background: var(--maroon); color: white; }
+  .qty-num { font-size: 0.95rem; font-weight: 700; min-width: 22px; text-align: center; }
+  
+  .ci-remove { background: rgba(198, 40, 40, 0.2); border: none; color: var(--danger); cursor: pointer; font-size: 1.5rem; padding: 15px 25px; border-radius: var(--radius-sm); margin-left: 10px; -webkit-tap-highlight-color: transparent; }
+  .ci-remove:active { color: #ff5252; background: rgba(198, 40, 40, 0.4); }
+
+  #cart-footer { padding: 12px; border-top: 1px solid var(--surface3); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; background: var(--surface); }
+  .total-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+  .total-label { font-size: 0.85rem; color: var(--text-dim); }
+  .total-value { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+  .total-row.grand .total-label { font-size: 1rem; font-weight: 700; color: var(--text); }
+  .total-row.grand .total-value { font-size: 1.3rem; color: var(--accent); }
+
+  .cash-row { display: flex; gap: 8px; align-items: center; }
+  .cash-row label { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
+  #cash-input { flex: 1; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--surface3); border-radius: var(--radius-sm); color: var(--text); font-size: 1rem; font-weight: 600; outline: none; -webkit-appearance: none; text-align: right; }
+  #cash-input:focus { border-color: var(--accent); }
+
+  .change-row { background: var(--surface2); border-radius: var(--radius-sm); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .change-label { font-size: 0.8rem; color: var(--text-dim); }
+  #change-display { font-size: 1.1rem; font-weight: 700; color: #4CAF50; }
+  #change-display.insufficient { color: var(--danger); }
+
+  #checkout-btn { width: 100%; padding: 15px; background: var(--maroon); color: white; border: none; border-radius: var(--radius); font-size: 1.1rem; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+  #checkout-btn:hover { background: var(--maroon-light); }
+  #checkout-btn:active { transform: scale(0.98); }
+  #checkout-btn:disabled { background: var(--surface3); color: var(--text-dim); cursor: not-allowed; transform: none; }
+
+  #clear-cart-btn { background: none; border: 1px solid var(--surface3); color: var(--text-dim); border-radius: var(--radius-sm); padding: 8px; font-size: 0.8rem; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  #clear-cart-btn:active { border-color: var(--danger); color: var(--danger); }
+
+  /* ─── MODALS ─── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 16px; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 480px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 40px rgba(0,0,0,0.6); overflow: hidden; }
+  .modal-header { padding: 16px 20px; background: var(--maroon-dark); display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem; font-weight: 700; flex-shrink: 0; }
+  .modal-close { background: none; border: none; color: var(--text-dim); font-size: 1.4rem; cursor: pointer; padding: 4px 8px; border-radius: 4px; line-height: 1; -webkit-tap-highlight-color: transparent; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+
+  /* Forms & Buttons */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--surface3); border-radius: var(--radius-sm); color: var(--text); font-size: 0.95rem; outline: none; -webkit-appearance: none; font-family: inherit; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--maroon-light); }
+  .form-group select option { background: var(--surface2); }
+  .btn-primary { width: 100%; padding: 12px; background: var(--maroon); color: white; border: none; border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 700; cursor: pointer; margin-top: 4px; }
+  .btn-primary:active { opacity: 0.85; }
+  .btn-success { background: var(--success); }
+
+  /* ─── RECEIPT MODAL ─── */
+  #receipt-modal .receipt { background: white; color: #1a1a1a; border-radius: var(--radius-sm); padding: 20px; font-family: 'Courier New', monospace; margin-bottom: 12px; }
+  .receipt-header { text-align: center; margin-bottom: 16px; }
+  .receipt-logo { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+  .receipt-title { font-size: 1.3rem; font-weight: 700; }
+  .receipt-sub { font-size: 0.75rem; color: #555; }
+  .receipt-divider { border: none; border-top: 1px dashed #aaa; margin: 10px 0; }
+  .receipt-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 2px 0; }
+  .receipt-total-row { display: flex; justify-content: space-between; font-size: 1rem; font-weight: 700; padding: 4px 0; }
+  .receipt-change-row { display: flex; justify-content: space-between; font-size: 0.95rem; color: #2E7D32; font-weight: 600; padding: 2px 0; }
+  .receipt-footer { text-align: center; margin-top: 12px; font-size: 0.75rem; color: #777; }
+
+  /* ─── ADMIN MODAL ─── */
+  .admin-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .admin-tab { padding: 7px 14px; border: 2px solid var(--surface3); border-radius: 50px; background: transparent; color: var(--text-dim); font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+  .admin-tab.active { border-color: var(--maroon); background: var(--maroon); color: white; }
+  .admin-panel { display: none; }
+  .admin-panel.active { display: block; }
+  .item-row { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; align-items: center; gap: 10px; margin-bottom:8px;}
+  .item-row-img, .item-row-img-placeholder { width: 44px; height: 44px; border-radius: 6px; flex-shrink: 0; background: var(--surface3); object-fit: cover;}
+  .item-row-img-placeholder { display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+  .item-row-info { flex: 1; min-width: 0; }
+  .item-row-name { font-size: 0.85rem; font-weight: 600; }
+  .item-row-meta { font-size: 0.75rem; color: var(--text-dim); }
+  .item-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-edit, .btn-delete { padding: 6px 12px; border: none; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+  .btn-edit { background: var(--surface3); color: var(--text); }
+  .btn-delete { background: rgba(198,40,40,0.2); color: #EF9A9A; }
+  .img-upload-area { border: 2px dashed var(--surface3); border-radius: var(--radius-sm); padding: 16px; text-align: center; cursor: pointer; }
+  .img-upload-area input[type="file"] { display: none; }
+  .img-preview { width: 80px; height: 80px; border-radius: var(--radius-sm); object-fit: cover; margin: 0 auto 8px; display: block; }
+  .img-upload-hint { font-size: 0.8rem; color: var(--text-dim); }
+  .category-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .cat-chip { background: var(--surface3); border: none; color: var(--text); padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .cat-chip .del { color: var(--danger); font-size: 1rem; line-height: 1; }
+
+  /* ─── SALES MODAL ─── */
+  .sales-summary { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+  .sales-stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+  .sales-stat .val { font-weight: 700; color: var(--accent); }
+  .sale-entry { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 6px; font-size: 0.8rem; }
+  .sale-entry-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .sale-time { color: var(--text-dim); }
+  .sale-amount { font-weight: 700; color: var(--accent); }
+  .sale-items { color: var(--text-dim); font-size: 0.75rem; }
+
+  /* ─── EXPENSES TAB ─── */
+  .expense-entry { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 6px; }
+  .expense-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .expense-cat { font-size: 0.85rem; font-weight: 700; color: var(--purple); }
+  .expense-amt { font-size: 0.9rem; font-weight: 700; color: var(--danger); }
+  .expense-desc { font-size: 0.8rem; color: var(--text); margin-bottom: 4px; }
+  .expense-meta { font-size: 0.75rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+  .expense-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+  /* ─── CALENDAR / REPORTS ─── */
+  .cal-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: var(--surface2); padding: 8px 12px; border-radius: var(--radius-sm); }
+  .cal-controls button { background: none; border: none; color: var(--text); font-size: 1.1rem; cursor: pointer; padding: 4px 10px; border-radius: var(--radius-sm); }
+  .cal-controls button:active { background: var(--surface3); }
+  .cal-controls span { font-weight: 700; font-size: 1rem; }
+  .monthly-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stat-box { background: var(--surface2); padding: 10px; border-radius: var(--radius-sm); text-align: center; border: 1px solid transparent; }
+  .stat-box .lbl { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-box .val { font-size: 1.1rem; font-weight: bold; }
+  .profit-text { color: #81C784; }
+  .loss-text { color: #E57373; }
+  .stat-box.profit-box { border-color: #2E7D32; background: rgba(46, 125, 50, 0.1); }
+  .stat-box.loss-box { border-color: #C62828; background: rgba(198, 40, 40, 0.1); }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 16px; }
+  .cal-day-header { text-align: center; font-size: 0.75rem; color: var(--text-dim); font-weight: bold; padding-bottom: 4px; }
+  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 600; border-radius: var(--radius-sm); cursor: pointer; background: var(--surface2); border: 1px solid var(--surface3); position: relative; }
+  .cal-day.profit { background: rgba(46, 125, 50, 0.2); border-color: var(--success); color: #A5D6A7; }
+  .cal-day.loss { background: rgba(198, 40, 40, 0.2); border-color: var(--danger); color: #EF9A9A; }
+  .cal-day.none { color: var(--text-dim); opacity: 0.6; }
+  .cal-day.active { border: 2px solid var(--text); transform: scale(1.05); z-index: 2; }
+
+  .day-details { background: var(--surface2); border-radius: var(--radius-sm); padding: 16px; margin-top: 16px; border: 1px solid var(--surface3); }
+  .day-details-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 12px; border-bottom: 1px solid var(--surface3); padding-bottom: 8px; color: var(--info); }
+  .details-list { font-size: 0.85rem; line-height: 1.6; }
+  .details-list .row { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--surface3); padding: 4px 0; }
+  .details-list .row:last-child { border-bottom: none; }
+  .details-list .row span.val { font-weight: bold; }
+  
+  .best-sellers { margin-top: 12px; font-size: 0.85rem; }
+  .best-sellers-title { color: var(--text-dim); font-weight: bold; margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase; }
+  .best-seller-item { display: flex; justify-content: space-between; background: var(--surface3); padding: 4px 8px; border-radius: 4px; margin-bottom: 4px; }
+
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--maroon-dark); color: white; padding: 10px 24px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; z-index: 999; transition: transform 0.3s ease; box-shadow: var(--shadow); white-space: nowrap; pointer-events: none; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    #cart-panel { width: 260px; min-width: 240px; }
+    #menu-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  }
+  @media (max-width: 480px) {
+    #layout { flex-direction: column; }
+    #cart-panel { width: 100%; max-width: 100%; height: 300px; border-left: none; border-top: 1px solid var(--surface3); }
+    #menu-panel { flex: 1; min-height: 0; }
+    #menu-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN GATE ─── -->
+<div id="login-gate" style="position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,var(--maroon-dark),#1a1a1a);display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surface);padding:32px 26px;border-radius:var(--radius);box-shadow:0 20px 50px rgba(0,0,0,.5);width:100%;max-width:340px;">
+    <div style="text-align:center;font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:4px;">Nan u <span style="color:var(--text);">Döner</span></div>
+    <div style="text-align:center;font-size:.85rem;color:var(--text-dim);margin-bottom:22px;">Sign in to continue</div>
+    <form id="login-form" onsubmit="return false;">
+      <div class="form-group"><label>Email</label><input type="email" id="login-user" autocomplete="username" autocapitalize="off" autocorrect="off" inputmode="email"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+      <button class="btn-primary" id="login-btn">Login</button>
+      <div id="login-error" style="color:var(--danger);font-size:.85rem;text-align:center;margin-top:12px;min-height:18px;"></div>
+    </form>
+  </div>
+</div>
+<!-- Login is handled by Firebase Authentication (see App script below) -->
+
+<script>
+/* ─── SIMPLE I18N (English ⇄ Kurdish) ─── */
+(function(){
+  var DICT = {
+    order:"داواکاری", items:"دانە", tapAdd:"کرتە بکە بۆ زیادکردن",
+    total:"کۆی گشتی", cash:"نەقد", change:"گەڕاوە", clear:"سڕینەوە", checkout:"پارەدان",
+    searchPh:"گەڕان لە لیست…",
+    sales:"فرۆشتن", expenses:"خەرجی", reports:"ڕاپۆرت", printReport:"چاپی ڕاپۆرت", admin:"بەڕێوەبەر",
+    receipt:"پسووڵە", adminPanel:"پانێڵی بەڕێوەبەر", dailySales:"فرۆشتنی ڕۆژانە", reportsCal:"ڕاپۆرتی ڕۆژانە و ساڵنامە",
+    tabAdd:"زیادکردنی خواردن", tabItems:"بەڕێوەبردنی خواردن", tabCats:"بەشەکان", tabSettings:"ڕێکخستن",
+    username:"ئیمەیڵ", password:"تێپەڕەوشە", login:"چوونەژوورەوە", logout:"دەرچوون"
+  };
+  var EN = {
+    order:"Order", items:"items", tapAdd:"Tap items to add",
+    total:"Total", cash:"Cash", change:"Change", clear:"Clear", checkout:"Checkout",
+    searchPh:"Search menu…",
+    sales:"Sales", expenses:"Expenses", reports:"Reports", printReport:"Print Report", admin:"Admin",
+    receipt:"Receipt", adminPanel:"Admin Panel", dailySales:"Daily Sales", reportsCal:"Daily Reports & Calendar",
+    tabAdd:"Add Item", tabItems:"Manage Items", tabCats:"Categories", tabSettings:"Settings",
+    username:"Email", password:"Password", login:"Login", logout:"Logout"
+  };
+
+  window.LANG = localStorage.getItem('pos_lang') || 'en';
+  window.t = function(key){ return (window.LANG === 'ku' ? DICT[key] : EN[key]) || EN[key] || key; };
+
+  function setTxt(sel, key){ var el = document.querySelector(sel); if(el) el.textContent = window.t(key); }
+  function setPh(sel, key){ var el = document.querySelector(sel); if(el) el.placeholder = window.t(key); }
+  function setList(sel, keys){ var els = document.querySelectorAll(sel); for(var i=0;i<els.length && i<keys.length;i++){ els[i].textContent = window.t(keys[i]); } }
+
+  window.applyStaticLang = function(){
+    document.documentElement.lang = (window.LANG === 'ku') ? 'ckb' : 'en';
+    document.documentElement.dir  = (window.LANG === 'ku') ? 'rtl' : 'ltr';
+
+    setTxt('.hbtn-sales','sales'); setTxt('.hbtn-expenses','expenses'); setTxt('.hbtn-calendar','reports');
+    setTxt('.hbtn-export','printReport'); setTxt('.hbtn-admin','admin');
+
+    setTxt('#cart-header span', 'order');
+    setPh('#search-input','searchPh');
+    setTxt('.total-row.grand .total-label','total');
+    setTxt('.cash-row label','cash');
+    setTxt('.change-label','change');
+    setTxt('#clear-cart-btn','clear');
+    setTxt('#checkout-btn','checkout');
+
+    var empty = document.querySelector('#cart-items .cart-empty div:last-child');
+    if(empty) empty.textContent = window.t('tapAdd');
+
+    var badge = document.getElementById('cart-count-badge');
+    if(badge){ var n = parseInt(badge.textContent,10) || 0; badge.textContent = n + ' ' + window.t('items'); }
+
+    setTxt('#receipt-modal .modal-header span','receipt');
+    setTxt('#admin-modal .modal-header span','adminPanel');
+    setTxt('#sales-modal .modal-header span','dailySales');
+    setTxt('#expenses-modal .modal-header span','expenses');
+    setTxt('#calendar-modal .modal-header span','reportsCal');
+
+    setList('#admin-modal .admin-tab', ['tabAdd','tabItems','tabCats','tabSettings']);
+
+    setList('#login-gate label', ['username','password']);
+    setTxt('#login-btn','login');
+    setTxt('#logout-btn','logout');
+
+    var lb = document.getElementById('lang-btn');
+    if(lb) lb.textContent = (window.LANG === 'ku') ? 'English' : 'کوردی';
+  };
+
+  window.toggleLang = function(){
+    window.LANG = (window.LANG === 'ku') ? 'en' : 'ku';
+    localStorage.setItem('pos_lang', window.LANG);
+    window.applyStaticLang();
+  };
+
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', window.applyStaticLang);
+  else
+    window.applyStaticLang();
+})();
+</script>
+
+<div id="app-header">
+  <div class="brand-container">
+    <div id="brand-icon" class="brand-logo" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:linear-gradient(135deg,var(--accent),var(--accent-dark));">🥙</div>
+    <img id="header-logo" alt="" class="brand-logo" style="display:none;" onload="var b=document.getElementById('brand-icon');if(b)b.style.display='none';" onerror="this.style.display='none';var b=document.getElementById('brand-icon');if(b)b.style.display='flex';">
+    <div class="brand">Nan u <span>Döner</span></div>
+  </div>
+  <div class="header-btns">
+    <button class="hbtn hbtn-sales" onclick="App.openSales()">Sales</button>
+    <button class="hbtn hbtn-expenses" onclick="App.openExpenses()">Expenses</button>
+    <button class="hbtn hbtn-calendar" onclick="App.openCalendar()">Reports</button>
+    <button class="hbtn hbtn-export" onclick="App.printReport()">Print Report</button>
+    <button class="hbtn hbtn-admin" onclick="App.openAdmin()">Admin</button>
+    <button class="hbtn" id="lang-btn" style="background:var(--accent);color:#1a1a1a;" onclick="toggleLang()">کوردی</button>
+    <button class="hbtn" id="logout-btn" style="background:var(--danger);color:white;" onclick="App.logout()">Logout</button>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="menu-panel">
+    <div id="category-bar">
+      <button class="cat-btn active" data-cat="All" onclick="App.filterCategory('All', this)">All</button>
+    </div>
+    <div id="search-bar">
+      <input id="search-input" type="search" placeholder="Search menu…" oninput="App.searchMenu(this.value)" autocomplete="off" autocorrect="off" autocapitalize="off">
+    </div>
+    <div id="menu-grid"></div>
+  </div>
+
+  <div id="cart-panel">
+    <div id="cart-header">
+      <span>Order</span>
+      <span id="cart-count-badge">0 items</span>
+    </div>
+    <div id="cart-items">
+      <div class="cart-empty">
+        <div class="cart-empty-icon">🛒</div>
+        <div>Tap items to add</div>
+      </div>
+    </div>
+    <div id="cart-footer">
+      <div class="total-row grand">
+        <span class="total-label">Total</span>
+        <span class="total-value" id="cart-total">0 IQD</span>
+      </div>
+      <div class="cash-row">
+        <label for="cash-input">Cash</label>
+        <input id="cash-input" type="number" min="0" placeholder="0" oninput="App.updateChange()" inputmode="numeric">
+      </div>
+      <div class="change-row">
+        <span class="change-label">Change</span>
+        <span id="change-display">— IQD</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="clear-cart-btn" onclick="App.clearCart()">Clear</button>
+        <button id="checkout-btn" onclick="App.checkout()" disabled>Checkout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Receipt</span>
+      <button class="modal-close" onclick="App.closeModal('receipt-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="receipt" id="receipt-content"></div>
+      <button id="print-receipt-btn" class="btn-primary" onclick="App.printReceipt()">Print Receipt</button>
+      <button id="new-order-btn" class="btn-primary" style="background:var(--accent);color:#1a1a1a;" onclick="App.newOrder()">New Order</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="admin-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span>Admin Panel</span>
+      <button class="modal-close" onclick="App.closeModal('admin-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="App.adminTab('add', this)">Add Item</button>
+        <button class="admin-tab" onclick="App.adminTab('items', this)">Manage Items</button>
+        <button class="admin-tab" onclick="App.adminTab('cats', this)">Categories</button>
+        <button class="admin-tab" onclick="App.adminTab('settings', this)">Settings</button>
+      </div>
+      
+      <div class="admin-panel active" id="panel-add">
+        <input type="hidden" id="edit-id">
+        <div class="form-group"><label>Item Name *</label><input type="text" id="item-name" autocomplete="off"></div>
+        <div class="form-group"><label>Price (IQD) *</label><input type="number" id="item-price" min="0"></div>
+        <div class="form-group"><label>Category *</label><select id="item-category"></select></div>
+        <div class="form-group">
+          <label>Photo (optional)</label>
+          <div class="img-upload-area" onclick="document.getElementById('item-img-file').click()">
+            <input type="file" id="item-img-file" accept="image/*" onchange="App.handleImageUpload(this)">
+            <img id="img-preview" class="img-preview" style="display:none;" alt="">
+            <div class="img-upload-hint" id="img-hint">Tap to upload photo</div>
+          </div>
+        </div>
+        <input type="hidden" id="item-img-data">
+        <button class="btn-primary" id="save-item-btn" onclick="App.saveItem()">Add Item</button>
+        <button class="btn-primary" id="cancel-edit-btn" style="display:none;background:var(--surface3);" onclick="App.cancelEdit()">Cancel Edit</button>
+      </div>
+      
+      <div class="admin-panel" id="panel-items">
+        <button class="btn-primary" onclick="App.saveMenuOrder()" style="margin-bottom:12px; background:var(--info);">💾 Save New Menu Order</button>
+        <div id="admin-items-list"></div>
+      </div>
+      
+      <div class="admin-panel" id="panel-cats">
+        <div class="form-group">
+          <label>Add Category</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="new-cat-input" placeholder="Category name" style="flex:1;" autocomplete="off">
+            <button class="btn-primary" style="width:auto;margin:0;" onclick="App.addCategory()">Add</button>
+          </div>
+        </div>
+        <div id="cat-chips-list" class="category-chips"></div>
+      </div>
+
+      <div class="admin-panel" id="panel-settings">
+        <div class="form-group">
+          <label>Store Logo</label>
+          <div class="img-upload-area" onclick="document.getElementById('store-logo-file').click()">
+            <input type="file" id="store-logo-file" accept="image/*" onchange="App.handleLogoUpload(this)">
+            <img id="logo-preview" class="img-preview" style="display:none;" alt="">
+            <div class="img-upload-hint" id="logo-hint">Tap to upload logo</div>
+          </div>
+          <button class="btn-primary" style="margin-top:8px;background:var(--surface3);" onclick="App.clearLogo()">Remove Logo</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sales-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span>Daily Sales</span>
+      <button class="modal-close" onclick="App.closeModal('sales-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="sales-summary" class="sales-summary"></div>
+      <div id="sales-list"></div>
+      <button class="btn-primary btn-success" style="margin-top:8px;" onclick="App.printReport()">Print Daily Sales</button>
+      <button class="btn-primary" style="margin-top:8px;background:var(--danger);" onclick="App.clearSales()">Clear All Sales</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="expenses-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <span>Expenses</span>
+      <button class="modal-close" onclick="App.closeModal('expenses-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      
+      <div style="background:var(--surface2); padding:14px; border-radius:var(--radius-sm); margin-bottom:16px;">
+        <div style="font-weight:bold; margin-bottom:10px; color:var(--purple);" id="exp-form-title">Add New Expense</div>
+        <input type="hidden" id="exp-id">
+        <div class="filter-row">
+          <div class="form-group" style="flex:1; margin-bottom:8px;">
+            <label>Date</label>
+            <input type="date" id="exp-date">
+          </div>
+          <div class="form-group" style="flex:1; margin-bottom:8px;">
+            <label>Category</label>
+            <select id="exp-category">
+              <option value="Meat">Meat</option>
+              <option value="Chicken">Chicken</option>
+              <option value="Nan/Bread">Nan/Bread</option>
+              <option value="Fries">Fries</option>
+              <option value="Vegetables/Salad">Vegetables/Salad</option>
+              <option value="Gas">Gas</option>
+              <option value="Rent">Rent</option>
+              <option value="Staff">Staff</option>
+              <option value="Chef">Chef</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Drinks">Drinks</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Description</label>
+          <input type="text" id="exp-desc" placeholder="e.g. 50kg Meat from Market">
+        </div>
+        <div class="filter-row">
+          <div class="form-group" style="flex:1; margin-bottom:8px;">
+            <label>Amount (IQD)</label>
+            <input type="number" id="exp-amount" placeholder="0">
+          </div>
+          <div class="form-group" style="flex:1; margin-bottom:8px;">
+            <label>Payment Method (Opt)</label>
+            <select id="exp-payment">
+              <option value="Cash">Cash</option>
+              <option value="FastPay">FastPay</option>
+              <option value="Card">Card</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Notes (Opt)</label>
+          <input type="text" id="exp-notes" placeholder="Optional details">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-primary" style="background:var(--purple);" id="btn-save-exp" onclick="App.saveExpense()">Save Expense</button>
+          <button class="btn-primary" style="background:var(--surface3); display:none;" id="btn-cancel-exp" onclick="App.cancelExpenseEdit()">Cancel</button>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-weight:bold;">Expense History</div>
+        <div style="font-weight:bold; color:var(--danger);" id="exp-total-display">Total: 0 IQD</div>
+      </div>
+      <div class="filter-row" style="background:var(--surface2); padding:8px; border-radius:var(--radius-sm);">
+        <input type="date" id="filter-exp-date" style="flex:1; background:var(--surface); color:var(--text); border:none; padding:6px; border-radius:4px;" onchange="App.renderExpenses()">
+        <select id="filter-exp-cat" style="flex:1; background:var(--surface); color:var(--text); border:none; padding:6px; border-radius:4px;" onchange="App.renderExpenses()">
+          <option value="All">All Categories</option>
+          <option value="Meat">Meat</option>
+          <option value="Chicken">Chicken</option>
+          <option value="Nan/Bread">Nan/Bread</option>
+          <option value="Fries">Fries</option>
+          <option value="Vegetables/Salad">Vegetables/Salad</option>
+          <option value="Gas">Gas</option>
+          <option value="Rent">Rent</option>
+          <option value="Staff">Staff</option>
+          <option value="Chef">Chef</option>
+          <option value="Packaging">Packaging</option>
+          <option value="Drinks">Drinks</option>
+          <option value="Maintenance">Maintenance</option>
+          <option value="Other">Other</option>
+        </select>
+        <button onclick="document.getElementById('filter-exp-date').value=''; document.getElementById('filter-exp-cat').value='All'; App.renderExpenses();" style="background:var(--surface3); color:var(--text); border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Reset</button>
+      </div>
+      <div id="expenses-list"></div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="calendar-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <span>Daily Reports & Calendar</span>
+      <button class="modal-close" onclick="App.closeModal('calendar-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="cal-controls">
+        <button onclick="App.changeMonth(-1)">◀</button>
+        <span id="cal-month-year">May 2026</span>
+        <button onclick="App.changeMonth(1)">▶</button>
+      </div>
+      <div class="monthly-stats" id="cal-monthly-stats">
+        <div class="stat-box"><div class="lbl">Total Sales</div><div class="val text-info">0 IQD</div></div>
+        <div class="stat-box"><div class="lbl">Total Expenses</div><div class="val text-danger">0 IQD</div></div>
+        <div class="stat-box"><div class="lbl">Net Profit</div><div class="val">0 IQD</div></div>
+        <div class="stat-box"><div class="lbl">Orders</div><div class="val">0</div></div>
+      </div>
+      <div class="cal-grid" id="cal-grid">
+        <div class="cal-day-header">Sun</div><div class="cal-day-header">Mon</div><div class="cal-day-header">Tue</div>
+        <div class="cal-day-header">Wed</div><div class="cal-day-header">Thu</div><div class="cal-day-header">Fri</div>
+        <div class="cal-day-header">Sat</div>
+      </div>
+      <div id="cal-day-details" class="day-details" style="display:none;">
+        <div class="day-details-title" id="det-title">Details for YYYY-MM-DD</div>
+        <div class="details-list">
+          <div class="row"><span>Total Sales:</span> <span class="val profit-text" id="det-sales">0 IQD</span></div>
+          <div class="row"><span>Total Expenses:</span> <span class="val loss-text" id="det-exp">0 IQD</span></div>
+          <div class="row"><span>Net Profit:</span> <span class="val" id="det-net">0 IQD</span></div>
+          <div class="row"><span>Number of Orders:</span> <span class="val" id="det-orders">0</span></div>
+        </div>
+              <div class="best-sellers" id="det-best-sellers"></div>
+        <div class="best-sellers" id="det-exp-list" style="margin-top:12px;"></div>
+        <div id="det-actions" style="margin-top:16px; display:flex; gap:8px;"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script>
+var App = (function() {
+  'use strict';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyArExP2R92vp8DalU9C7SDylAXB9a1UjLQ",
+  authDomain: "nan-u-doner-pos.firebaseapp.com",
+  projectId: "nan-u-doner-pos",
+  storageBucket: "nan-u-doner-pos.firebasestorage.app",
+  messagingSenderId: "800998898843",
+  appId: "1:800998898843:web:2e2eb94ade249987c1da3e",
+  measurementId: "G-5R34KS2QQ3"
+};
+
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  // ─── AUTH (Firebase Authentication) ───
+  var dataStarted = false;
+  function authErrorText(code) {
+    var ku = window.LANG === 'ku';
+    switch (code) {
+      case 'auth/invalid-email': return ku ? 'ئیمەیڵەکە دروست نییە' : 'Invalid email address';
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-login-credentials':
+      case 'auth/invalid-credential': return ku ? 'ئیمەیڵ یان تێپەڕەوشە هەڵەیە' : 'Wrong email or password';
+      case 'auth/too-many-requests': return ku ? 'هەوڵی زۆر درا، کەمێک چاوەڕێ بکە' : 'Too many attempts, try again later';
+      case 'auth/network-request-failed': return ku ? 'ئینتەرنێت نییە' : 'No internet connection';
+      default: return ku ? 'چوونەژوورەوە سەرنەکەوت' : 'Login failed';
+    }
+  }
+  function tryLogin() {
+    var email = document.getElementById('login-user').value.trim();
+    var pass = document.getElementById('login-pass').value;
+    var err = document.getElementById('login-error');
+    var btn = document.getElementById('login-btn');
+    err.textContent = '';
+    if (!email || !pass) { err.textContent = window.LANG === 'ku' ? 'ئیمەیڵ و تێپەڕەوشە بنووسە' : 'Enter email and password'; return; }
+    btn.disabled = true;
+    auth.signInWithEmailAndPassword(email, pass)
+      .catch(function(e) { err.textContent = authErrorText(e.code); })
+      .finally(function() { btn.disabled = false; });
+  }
+  function logout() {
+    if (!confirm(window.LANG === 'ku' ? 'دڵنیایت دەتەوێت دەربچیت؟' : 'Log out?')) return;
+    auth.signOut().then(function() { location.reload(); });
+  }
+  document.getElementById('login-btn').addEventListener('click', tryLogin);
+  document.getElementById('login-pass').addEventListener('keydown', function(e){ if (e.key === 'Enter') tryLogin(); });
+  document.getElementById('login-user').addEventListener('keydown', function(e){ if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+  auth.onAuthStateChanged(function(user) {
+    var gate = document.getElementById('login-gate');
+    if (user) {
+      gate.style.display = 'none';
+      if (!dataStarted) { dataStarted = true; loadData(); }
+    } else {
+      gate.style.display = 'flex';
+      document.getElementById('login-pass').value = '';
+    }
+  });
+
+  var state = {
+    menu: [],
+    cart: [],
+    categories: ['Döner', 'Drinks', 'Extras'],
+    activeCategory: 'All',
+    searchQuery: '',
+    sales: [],
+    expenses: [],
+    logo: null,
+    calDate: new Date(),
+    editingId: null,
+    editingExpId: null
+  };
+
+  // Flag to check if heavy data was loaded
+  var heavyDataLoaded = false;
+
+    var DEFAULT_MENU = [
+    { id: 'meat-doner',      name: 'Meat Doner',           price: 4500, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'chicken-doner',   name: 'Chicken Doner',        price: 3500, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'mixed-doner',     name: 'Mixed Doner',          price: 5000, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'lezzoo-chicken',  name: 'Lezzoo Chicken Doner', price: 3330, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'lezzoo-meat',     name: 'Lezzoo Meat Doner',    price: 4070, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'fries',           name: 'Fries',                price: 3000, category: 'Extras', img: '', emoji: '🍟' },
+    { id: 'lezzoo-fries',    name: 'Lezzoo Fries',         price: 2220, category: 'Extras', img: '', emoji: '🍟' },
+    { id: 'soft-drink',      name: 'Soft Drink',           price: 500,  category: 'Drinks', img: '', emoji: '🥤' },
+    { id: 'water',           name: 'Water',                price: 250,  category: 'Drinks', img: '', emoji: '💧' },
+    { id: 'yogurt',          name: 'Yogurt',               price: 750,  category: 'Drinks', img: '', emoji: '🥛' }
+  ];
+
+
+  function lsGet(key, fallback) {
+    try { var raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); } 
+    catch (e) { return fallback; }
+  }
+  function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+
+  // FIX: Light load data on start
+  function loadData() {
+    state.logo = 'logo.PNG';
+
+    db.collection('menu').onSnapshot(function(snapshot) {
+      state.menu = [];
+      snapshot.forEach(function(doc) {
+        state.menu.push(doc.data());
+      });
+
+      state.menu.sort(function(a, b) {
+        var orderA = (typeof a.sortOrder === 'number') ? a.sortOrder : 999;
+        var orderB = (typeof b.sortOrder === 'number') ? b.sortOrder : 999;
+        return orderA - orderB;
+      });
+
+      renderCategoryBar();
+      renderMenu();
+      renderAdminItems();
+    });
+
+    db.collection('settings').doc('categories').onSnapshot(function(doc) {
+      if(doc.exists && doc.data().list) {
+        state.categories = doc.data().list;
+      }
+      renderCategoryBar();
+      renderCatChips();
+      populateCategorySelect();
+    });
+  }
+
+  // FIX: New function to load heavy history only when asked
+          function loadHeavyData(callback) {
+    if (heavyDataLoaded) {
+      if (callback) callback();
+      return;
+    }
+    showToast("Loading all historical data...");
+    heavyDataLoaded = true;
+
+    // Fetch all sales, ordered newest to oldest, with no date limits
+    db.collection('sales')
+      .orderBy('timestamp', 'desc')
+      .onSnapshot(function(snapshot) {
+      state.sales = [];
+      snapshot.forEach(function(doc) {
+        state.sales.push(doc.data());
+      });
+      
+      if (callback) { callback(); callback = null; }
+
+      if(document.getElementById('sales-modal').classList.contains('open')) {
+          openSales(); 
+      }
+      if(document.getElementById('calendar-modal').classList.contains('open')) {
+          renderCalendar(); 
+      }
+    });
+
+    // Fetch all expenses with no date limits
+    db.collection('expenses')
+      .onSnapshot(function(snapshot) {
+      state.expenses = [];
+      snapshot.forEach(function(doc) {
+        state.expenses.push(doc.data());
+      });
+      
+      if (callback) { callback(); callback = null; }
+
+      if(document.getElementById('expenses-modal').classList.contains('open')) {
+          renderExpenses();
+      }
+      if(document.getElementById('calendar-modal').classList.contains('open')) {
+          renderCalendar(); 
+      }
+    });
+  }
+
+  function saveCats() { db.collection('settings').doc('categories').set({ list: state.categories }); }
+
+  function fmt(n) { return Number(n).toLocaleString() + ' IQD'; }
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function toYYYYMMDD(date) { return date.getFullYear() + '-' + pad(date.getMonth()+1) + '-' + pad(date.getDate()); }
+  function tsToYYYYMMDD(ts) { return toYYYYMMDD(new Date(ts)); }
+  function uid() { return 'id_' + Date.now() + '_' + Math.floor(Math.random() * 10000); }
+
+  function getCategoriesFromMenu() {
+    var seen = {}, cats = [];
+    state.menu.forEach(function(item) { if (item.category && !seen[item.category]) { seen[item.category] = true; cats.push(item.category); } });
+    state.categories.forEach(function(cat) { if (!seen[cat]) { seen[cat] = true; cats.push(cat); } });
+    return cats;
+  }
+
+  function applyLogo() {
+    var headerLogo = document.getElementById('header-logo');
+    var previewLogo = document.getElementById('logo-preview');
+    var logoHint = document.getElementById('logo-hint');
+    
+    if (state.logo) {
+      headerLogo.src = state.logo;
+      headerLogo.style.display = 'block';
+      if(previewLogo) {
+        previewLogo.src = state.logo;
+        previewLogo.style.display = 'block';
+        logoHint.textContent = 'Tap to change logo';
+      }
+    } else {
+      headerLogo.src = '';
+      headerLogo.style.display = 'none';
+      var bi = document.getElementById('brand-icon');
+      if (bi) bi.style.display = 'flex';
+      if(previewLogo) {
+        previewLogo.src = '';
+        previewLogo.style.display = 'none';
+        logoHint.textContent = 'Tap to upload logo';
+      }
+    }
+  }
+
+  function renderCategoryBar() {
+    var bar = document.getElementById('category-bar');
+    bar.innerHTML = '<button class="cat-btn' + (state.activeCategory === 'All' ? ' active' : '') + '" onclick="App.filterCategory(\'All\', this)">All</button>';
+    getCategoriesFromMenu().forEach(function(cat) {
+      var btn = document.createElement('button');
+      btn.className = 'cat-btn' + (state.activeCategory === cat ? ' active' : '');
+      btn.textContent = cat;
+      btn.onclick = function(){ App.filterCategory(cat, btn); };
+      bar.appendChild(btn);
+    });
+  }
+
+  function filterCategory(cat, btn) {
+    state.activeCategory = cat;
+    document.querySelectorAll('#category-bar .cat-btn').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    renderMenu();
+  }
+  function searchMenu(q) { state.searchQuery = q; renderMenu(); }
+
+  function renderMenu() {
+    var grid = document.getElementById('menu-grid');
+    var q = state.searchQuery.toLowerCase();
+    
+    var filtered = state.menu.slice().sort(function(a,b) { return (a.sortOrder || 0) - (b.sortOrder || 0); }).filter(function(i) {
+      return (state.activeCategory === 'All' || i.category === state.activeCategory) && (!q || i.name.toLowerCase().indexOf(q) !== -1);
+    });
+
+    if (!filtered.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);">No items found</div>';
+      return;
+    }
+
+    grid.innerHTML = filtered.map(function(item) {
+      var inCart = state.cart.some(function(c){ return c.id === item.id; });
+      var imgH = item.img ? '<img class="card-img" src="' + esc(item.img) + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div class="card-img-placeholder" style="display:none;">' + (item.emoji||'🍽️') + '</div>' : '<div class="card-img-placeholder">' + (item.emoji||'🍽️') + '</div>';
+      return '<div class="menu-card ' + (inCart ? 'in-cart' : '') + '" data-id="' + item.id + '" onclick="App.addToCart(\'' + item.id + '\')">'
+        + imgH + '<div class="card-body"><div class="card-badge">' + esc(item.category) + '</div><div class="card-name">' + esc(item.name) + '</div><div class="card-price">' + fmt(item.price) + '</div></div></div>';
+    }).join('');
+  }
+
+  function addToCart(id) {
+    var item = state.menu.find(function(m){ return m.id === id; });
+    var existing = state.cart.find(function(c){ return c.id === id; });
+    if (existing) existing.qty++;
+    else state.cart.push(Object.assign({qty: 1}, item));
+    renderCart(); renderMenu(); showToast(item.name + ' added');
+  }
+
+  function changeQty(id, d) {
+    var idx = state.cart.findIndex(function(c){ return c.id === id; });
+    if (idx > -1) {
+      state.cart[idx].qty += d;
+      if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
+    }
+    renderCart(); renderMenu();
+  }
+
+  function removeFromCart(id) {
+    state.cart = state.cart.filter(function(c){ return c.id !== id; });
+    renderCart(); renderMenu();
+  }
+
+  function clearCart() { state.cart = []; document.getElementById('cash-input').value = ''; renderCart(); renderMenu(); }
+  function cartTotal() { return state.cart.reduce(function(s, c){ return s + c.price * c.qty; }, 0); }
+
+  function renderCart() {
+    var total = cartTotal(), count = state.cart.reduce(function(s,c){return s+c.qty;},0);
+    document.getElementById('cart-count-badge').textContent = count + ' ' + (window.t ? window.t('items') : 'items');
+    document.getElementById('cart-total').textContent = fmt(total);
+    var cont = document.getElementById('cart-items');
+    
+    if (!state.cart.length) {
+      cont.innerHTML = '<div class="cart-empty"><div class="cart-empty-icon">🛒</div><div>' + (window.t ? window.t('tapAdd') : 'Tap items to add') + '</div></div>';
+      document.getElementById('checkout-btn').disabled = true;
+    } else {
+      cont.innerHTML = state.cart.map(function(i) {
+        return '<div class="cart-item"><div class="ci-info"><div class="ci-name">' + esc(i.name) + '</div><div class="ci-price">' + fmt(i.price*i.qty) + '</div></div>'
+          + '<div class="ci-controls"><button class="qty-btn qty-minus" onclick="App.changeQty(\''+i.id+'\',-1)">−</button><span class="qty-num">' + i.qty + '</span>'
+          + '<button class="qty-btn qty-plus" onclick="App.changeQty(\''+i.id+'\',1)">+</button></div><button class="ci-remove" onclick="App.removeFromCart(\''+i.id+'\')">✕</button></div>';
+      }).join('');
+      document.getElementById('checkout-btn').disabled = false;
+    }
+    updateChange();
+  }
+
+  function updateChange() {
+    var total = cartTotal(), cash = parseFloat(document.getElementById('cash-input').value) || 0, el = document.getElementById('change-display');
+    if (cash <= 0) { el.textContent = '— IQD'; el.className = ''; return; }
+    var change = cash - total;
+    el.textContent = (change < 0 ? '-' : '') + fmt(Math.abs(change));
+    el.className = change < 0 ? 'insufficient' : '';
+  }
+
+  function checkout() {
+    if (!state.cart.length) return;
+    var total = cartTotal(), cash = parseFloat(document.getElementById('cash-input').value) || 0;
+    var saleId = uid();
+    var strippedItems = state.cart.map(function(i) {
+      return { id: i.id, name: i.name, price: i.price, qty: i.qty, category: i.category };
+    });
+    var sale = { id: saleId, timestamp: Date.now(), items: strippedItems, total: total, cash: cash, change: cash - total };
+    
+    db.collection('sales').doc(saleId).set(sale);
+    
+    var itemsH = sale.items.map(function(i){ return '<div class="receipt-row"><span>'+esc(i.name)+' x'+i.qty+'</span><span>'+fmt(i.price*i.qty)+'</span></div>'; }).join('');
+    var changeH = sale.cash > 0 ? '<hr class="receipt-divider"><div class="receipt-row"><span>Cash</span><span>'+fmt(sale.cash)+'</span></div><div class="receipt-change-row"><span>Change</span><span>'+fmt(Math.max(0,sale.change))+'</span></div>' : '';
+    
+    var d = new Date();
+    var logoHtml = state.logo ? '<img src="' + state.logo + '" alt="Logo" class="receipt-logo">' : '';
+    
+    document.getElementById('receipt-content').innerHTML = '<div class="receipt-header">' + '<div class="receipt-title">Nan u Döner</div><div class="receipt-sub">'+d.toLocaleDateString()+' '+d.toLocaleTimeString()+'</div></div>'
+      + '<hr class="receipt-divider">' + itemsH + '<hr class="receipt-divider"><div class="receipt-total-row"><span>TOTAL</span><span>'+fmt(sale.total)+'</span></div>' + changeH
+      + '<div class="receipt-footer">Thank you for dining with us!</div>';
+    
+    openModal('receipt-modal');
+  }
+
+  function printReceipt() {
+    var content = document.getElementById('receipt-content').innerHTML;
+    
+    content = content.replace(/Döner/g, 'Doner');
+    content = content.replace(/ö/g, 'o');
+
+    var win = window.open('', '_blank', 'width=400,height=600');
+    if (!win) { showToast('Allow popups to print'); return; }
+    
+        win.document.write('<html><head><title>Receipt</title><style>'
+      + '@page { size: 80mm auto; margin: 0; } '
+      + 'body { font-family: "Courier New", Courier, monospace; font-size: 14px; padding: 0 !important; width: 80mm; margin: 0 !important; color: #000; height: auto !important; }'
+      + '.receipt-header { text-align: center; margin-bottom: 12px; }'
+      + '.receipt-row { display: flex; justify-content: space-between; padding: 2px 0; }'
+      + '.receipt-total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; padding: 4px 0; }'
+      + 'hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }'
+      + '.receipt-footer { text-align: center; margin-top: 10px; font-size: 12px; color: #000; }'
+      + '.logo { display: none !important; }' 
+      + '</style></head><body>' 
+      + '<div style="padding: 10px;">' + content + '</div>'
+      + '</body></html>');
+
+    win.document.close();
+    win.focus();
+    setTimeout(function(){ win.print(); win.close(); }, 300);
+  }
+
+  function newOrder() {
+    closeModal('receipt-modal');
+    clearCart();
+    document.getElementById('cash-input').value = '';
+  }
+
+  // FIX: Added lazy loading check
+  function openSales() {
+    if (!heavyDataLoaded) { loadHeavyData(openSales); return; }
+
+    var today = new Date(); today.setHours(0,0,0,0);
+    var todaySales = state.sales.filter(function(s){ return s.timestamp >= today.getTime(); });
+    var totalRevenue = todaySales.reduce(function(sum, s){ return sum + s.total; }, 0);
+    var totalOrders = todaySales.length;
+
+    document.getElementById('sales-summary').innerHTML = '<div class="sales-stat"><span>Today\'s Orders</span><span class="val">' + totalOrders + '</span></div>'
+      + '<div class="sales-stat"><span>Today\'s Revenue</span><span class="val">' + fmt(totalRevenue) + '</span></div>'
+      + '<div class="sales-stat"><span>All-time Sales</span><span class="val">' + state.sales.length + '</span></div>';
+
+    var list = document.getElementById('sales-list');
+    var sorted = state.sales.slice(); 
+    if (sorted.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);">No sales yet</div>'; } 
+    else {
+      list.innerHTML = sorted.slice(0, 50).map(function(s) {
+        var itemSummary = s.items.map(function(i){ return i.name + ' x' + i.qty; }).join(', ');
+        return '<div class="sale-entry">'
+          + '<div class="sale-entry-top"><span class="sale-time">' + new Date(s.timestamp).toLocaleString() + '</span><span class="sale-amount">' + fmt(s.total) + '</span></div>'
+          + '<div class="sale-items">' + esc(itemSummary) + '</div>'
+          + '<div style="margin-top:8px; text-align:right;"><button class="btn-delete" style="padding:6px 12px; font-size:0.8rem;" onclick="App.deleteSale(\''+s.id+'\')">Delete Order</button></div>'
+          + '</div>';
+      }).join('');
+    }
+    openModal('sales-modal');
+  }
+
+  function deleteSale(id) {
+    if (!confirm('Delete this order? This will remove it from your daily totals.')) return;
+    db.collection('sales').doc(id).delete();
+    showToast('Order deleted');
+  }
+
+  function clearSales() {
+    if (!confirm('Clear all sales data? This cannot be undone.')) return;
+    state.sales.forEach(function(s) {
+        db.collection('sales').doc(s.id).delete();
+    });
+    showToast('Sales cleared');
+  }
+
+  // FIX: Added lazy loading check
+  function printReport() {
+    if (!heavyDataLoaded) { loadHeavyData(printReport); return; }
+
+    if (state.sales.length === 0) { showToast('No sales to print'); return; }
+
+    var html = '<html><head><title>Sales Report</title><style>'
+      + 'body{font-family:-apple-system, sans-serif; font-size:12px; padding:20px; color:#333;}'
+      + 'h2{text-align:center; margin-bottom:20px;}'
+      + 'table{width:100%; border-collapse:collapse; margin-bottom:20px;}'
+      + 'th, td{border:1px solid #ddd; padding:8px; text-align:left;}'
+      + 'th{background-color:#f4f4f4;}'
+      + '.right{text-align:right;}'
+      + '.total-row{font-weight:bold; background-color:#eee;}'
+      + '@media print { body{padding:0;} }'
+      + '</style></head><body>';
+
+    if (state.logo) {
+      html += '<div style="text-align:center;"><img src="' + state.logo + '" onerror="this.parentNode.style.display=\'none\'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;margin-bottom:10px;"></div>';
+    }
+    html += '<h2>Nan u Döner - Sales Report (' + new Date().toLocaleDateString() + ')</h2>';
+    html += '<table><thead><tr><th>Date & Time</th><th>Items</th><th class="right">Order Total</th></tr></thead><tbody>';
+
+    var grandTotal = 0;
+
+    var chronologicalSales = state.sales.slice().sort((a,b) => a.timestamp - b.timestamp);
+
+    chronologicalSales.forEach(function(s) {
+      grandTotal += s.total;
+      var dateObj = new Date(s.timestamp);
+      var timeStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+      var itemsStr = s.items.map(function(item) { return item.name + ' x' + item.qty; }).join('<br>');
+      
+      html += '<tr>'
+        + '<td>' + timeStr + '</td>'
+        + '<td>' + itemsStr + '</td>'
+        + '<td class="right">' + fmt(s.total) + '</td>'
+        + '</tr>';
+    });
+
+    html += '<tr class="total-row"><td colspan="2" class="right">Grand Total</td><td class="right">' + fmt(grandTotal) + '</td></tr>';
+    html += '</tbody></table></body></html>';
+
+    var win = window.open('', '_blank', 'width=800,height=600');
+    if (!win) { showToast('Allow popups to print'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(function(){ win.print(); win.close(); }, 300);
+  }
+
+  function openAdmin() {
+    adminTab('add', document.querySelector('.admin-tab.active') || document.querySelector('.admin-tab'));
+    renderAdminItems();
+    renderCatChips();
+    populateCategorySelect();
+    openModal('admin-modal');
+  }
+
+  function adminTab(name, btn) {
+    document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.admin-panel').forEach(function(p){ p.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    var panel = document.getElementById('panel-' + name);
+    if (panel) panel.classList.add('active');
+    if (name === 'items') renderAdminItems();
+    if (name === 'cats') renderCatChips();
+    if (name === 'add') populateCategorySelect();
+  }
+
+  function populateCategorySelect() {
+    var sel = document.getElementById('item-category');
+    sel.innerHTML = getCategoriesFromMenu().map(function(c){ return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+  }
+
+  function handleImageUpload(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onload = function() {
+        // Resize to max 500px and compress, so it stays well under Firestore's 1MB limit
+        var MAX = 500, w = img.width, h = img.height;
+        if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+        else if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var data = canvas.toDataURL('image/jpeg', 0.75);
+        document.getElementById('item-img-data').value = data;
+        var preview = document.getElementById('img-preview');
+        preview.src = data; preview.style.display = 'block';
+        document.getElementById('img-hint').textContent = 'Tap to change photo';
+      };
+      img.onerror = function() { showToast('Could not read image'); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleLogoUpload(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      state.logo = e.target.result;
+      lsSet('pos_logo', state.logo);
+      applyLogo();
+      showToast('Store logo updated');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearLogo() {
+    state.logo = null;
+    lsSet('pos_logo', null);
+    applyLogo();
+    document.getElementById('store-logo-file').value = '';
+    showToast('Store logo removed');
+  }
+
+  function saveItem() {
+    var name = document.getElementById('item-name').value.trim();
+    var price = parseInt(document.getElementById('item-price').value, 10);
+    var category = document.getElementById('item-category').value;
+    var imgData = document.getElementById('item-img-data').value;
+    var editId = document.getElementById('edit-id').value;
+
+    if (!name) { showToast('Enter item name'); return; }
+    if (!price || price <= 0) { showToast('Valid price required'); return; }
+    if (!category) { showToast('Select a category'); return; }
+
+    if (editId) {
+      var item = state.menu.find(function(m){ return m.id === editId; });
+      if (item) { 
+        item.name = name; item.price = price; item.category = category; if (imgData) item.img = imgData; 
+        db.collection('menu').doc(editId).set(item);
+      }
+      showToast(name + ' updated');
+    } else {
+      var newId = uid();
+      var newItem = { id: newId, name: name, price: price, category: category, img: imgData, emoji: '🍽️' };
+      db.collection('menu').doc(newId).set(newItem);
+      showToast(name + ' added');
+    }
+    resetItemForm();
+  }
+
+  function resetItemForm() {
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-price').value = '';
+    document.getElementById('item-img-data').value = '';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('item-img-file').value = '';
+    var preview = document.getElementById('img-preview');
+    preview.src = ''; preview.style.display = 'none';
+    document.getElementById('img-hint').textContent = 'Tap to upload photo';
+    document.getElementById('save-item-btn').textContent = 'Add Item';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+  }
+
+  function cancelEdit() { resetItemForm(); }
+
+  function editItem(id) {
+    var item = state.menu.find(function(m){ return m.id === id; });
+    if (!item) return;
+    populateCategorySelect();
+    document.getElementById('edit-id').value = item.id;
+    document.getElementById('item-name').value = item.name;
+    document.getElementById('item-price').value = item.price;
+    document.getElementById('item-category').value = item.category;
+    if (item.img) {
+      document.getElementById('item-img-data').value = item.img;
+      var preview = document.getElementById('img-preview');
+      preview.src = item.img; preview.style.display = 'block';
+      document.getElementById('img-hint').textContent = 'Tap to change photo';
+    }
+    document.getElementById('save-item-btn').textContent = 'Update Item';
+    document.getElementById('cancel-edit-btn').style.display = 'block';
+    adminTab('add', document.querySelectorAll('.admin-tab')[0]);
+  }
+
+  function deleteItem(id) {
+    if (!confirm('Delete this item?')) return;
+    db.collection('menu').doc(id).delete();
+    state.cart = state.cart.filter(function(c){ return c.id !== id; });
+    renderCart(); showToast('Item deleted');
+  }
+
+  function moveItem(id, direction) {
+    state.menu.sort(function(a,b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+    var idx = state.menu.findIndex(function(m){ return m.id === id; });
+    if (idx < 0) return;
+    if (direction === 'up' && idx > 0) {
+      var temp = state.menu[idx];
+      state.menu[idx] = state.menu[idx - 1];
+      state.menu[idx - 1] = temp;
+    } else if (direction === 'down' && idx < state.menu.length - 1) {
+      var temp = state.menu[idx];
+      state.menu[idx] = state.menu[idx + 1];
+      state.menu[idx + 1] = temp;
+    }
+    state.menu.forEach(function(m, i) { m.sortOrder = i; });
+    renderAdminItems();
+    renderMenu(); 
+  }
+
+  function renderAdminItems() {
+    var list = document.getElementById('admin-items-list');
+    if (!list) return;
+    if (state.menu.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);">No items yet</div>'; return; }
+    
+    var sortedMenu = state.menu.slice().sort(function(a,b) { return (a.sortOrder || 0) - (b.sortOrder || 0); });
+
+    list.innerHTML = sortedMenu.map(function(item) {
+      var imgHtml = item.img ? '<img class="item-row-img" src="' + esc(item.img) + '">' : '<div class="item-row-img-placeholder">' + (item.emoji || '🍽️') + '</div>';
+      return '<div class="item-row" data-id="' + item.id + '">' 
+        + imgHtml + '<div class="item-row-info" style="margin-left:10px;"><div class="item-row-name">' + esc(item.name) + '</div><div class="item-row-meta">' + esc(item.category) + ' · ' + fmt(item.price) + '</div></div>'
+        + '<div class="item-row-actions">'
+        + '<button class="btn-edit" style="background:var(--surface3); font-size:1.1rem; padding:4px 10px;" onclick="App.moveItem(\'' + item.id + '\', \'up\')">▲</button>'
+        + '<button class="btn-edit" style="background:var(--surface3); font-size:1.1rem; padding:4px 10px; margin-right:8px;" onclick="App.moveItem(\'' + item.id + '\', \'down\')">▼</button>'
+        + '<button class="btn-edit" onclick="App.editItem(\'' + item.id + '\')">Edit</button>'
+        + '<button class="btn-delete" onclick="App.deleteItem(\'' + item.id + '\')">Delete</button></div></div>';
+    }).join('');
+  }
+
+  function saveMenuOrder() {
+    var batch = db.batch();
+    state.menu.forEach(function(item) {
+      var ref = db.collection('menu').doc(item.id);
+      batch.set(ref, { sortOrder: item.sortOrder || 0 }, { merge: true });
+    });
+    batch.commit().then(function() { 
+      showToast("Menu order saved successfully!"); 
+    }).catch(function() {
+      showToast("Error saving order");
+    });
+  }
+
+  function addCategory() {
+    var input = document.getElementById('new-cat-input');
+    var name = input.value.trim();
+    if (!name) { showToast('Enter a category name'); return; }
+    if (state.categories.indexOf(name) !== -1) { showToast('Category already exists'); return; }
+    state.categories.push(name); saveCats();
+    input.value = ''; showToast(name + ' added');
+  }
+
+  function deleteCategory(name) {
+    var inUse = state.menu.some(function(m){ return m.category === name; });
+    if (inUse) { showToast('Cannot delete — category has items'); return; }
+    state.categories = state.categories.filter(function(c){ return c !== name; });
+    saveCats(); showToast(name + ' removed');
+  }
+
+  function renderCatChips() {
+    var container = document.getElementById('cat-chips-list');
+    if (!container) return;
+    container.innerHTML = getCategoriesFromMenu().map(function(cat) {
+      return '<div class="cat-chip">' + esc(cat) + '<span class="del" onclick="App.deleteCategory(\'' + esc(cat) + '\')">×</span></div>';
+    }).join('');
+  }
+
+  function openExpensesForDate(dateStr) {
+    closeModal('calendar-modal');
+    openExpenses();
+    document.getElementById('exp-date').value = dateStr;
+  }
+
+  function addManualSaleForDate(dateStr) {
+    var amtStr = prompt("Enter total amount for this missed sale (IQD):");
+    if (!amtStr) return;
+    var amt = parseFloat(amtStr);
+    if (isNaN(amt) || amt <= 0) { showToast("Invalid amount"); return; }
+    var note = prompt("Enter a description (e.g. 'Late cash order')") || "Manual Entry";
+
+    var d = new Date(dateStr);
+    d.setHours(12, 0, 0, 0);
+
+    var saleId = uid();
+    var sale = { 
+      id: saleId, timestamp: d.getTime(), 
+      items: [{ name: note, price: amt, qty: 1 }], 
+      total: amt, cash: amt, change: 0 
+    };
+
+    db.collection('sales').doc(saleId).set(sale);
+    showToast("Past sale added!");
+    
+    showDayDetails(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // FIX: Added lazy loading check
+  function openExpenses() {
+    if (!heavyDataLoaded) { loadHeavyData(openExpenses); return; }
+
+    document.getElementById('exp-date').value = toYYYYMMDD(new Date());
+    document.getElementById('filter-exp-date').value = toYYYYMMDD(new Date()); 
+    document.getElementById('filter-exp-cat').value = 'All';
+    resetExpenseForm();
+    renderExpenses();
+    openModal('expenses-modal');
+  }
+
+  function saveExpense() {
+    var date = document.getElementById('exp-date').value;
+    var cat = document.getElementById('exp-category').value;
+    var desc = document.getElementById('exp-desc').value.trim();
+    var amt = parseFloat(document.getElementById('exp-amount').value);
+    var pay = document.getElementById('exp-payment').value;
+    var notes = document.getElementById('exp-notes').value.trim();
+    
+    if(!date) return showToast('Date required');
+    if(!desc) return showToast('Description required');
+    if(!amt || amt <= 0) return showToast('Valid amount required');
+
+    if(state.editingExpId) {
+      var exp = state.expenses.find(function(e){ return e.id === state.editingExpId; });
+      if(exp) { 
+          exp.date = date; exp.category = cat; exp.desc = desc; exp.amount = amt; exp.payment = pay; exp.notes = notes; 
+          db.collection('expenses').doc(exp.id).set(exp);
+      }
+      showToast('Expense updated');
+    } else {
+      var newExp = { id: uid(), date: date, category: cat, desc: desc, amount: amt, payment: pay, notes: notes };
+      db.collection('expenses').doc(newExp.id).set(newExp);
+      showToast('Expense added');
+    }
+    
+    resetExpenseForm(); 
+  }
+
+  function editExpense(id) {
+    var exp = state.expenses.find(function(e){ return e.id === id; });
+    if(!exp) return;
+    state.editingExpId = id;
+    document.getElementById('exp-date').value = exp.date;
+    document.getElementById('exp-category').value = exp.category;
+    document.getElementById('exp-desc').value = exp.desc;
+    document.getElementById('exp-amount').value = exp.amount;
+    document.getElementById('exp-payment').value = exp.payment || 'Cash';
+    document.getElementById('exp-notes').value = exp.notes || '';
+    
+    document.getElementById('exp-form-title').textContent = 'Edit Expense';
+    document.getElementById('btn-save-exp').textContent = 'Update Expense';
+    document.getElementById('btn-cancel-exp').style.display = 'block';
+  }
+
+  function deleteExpense(id) {
+    if(!confirm('Delete this expense?')) return;
+    db.collection('expenses').doc(id).delete();
+    showToast('Expense deleted');
+  }
+
+  function cancelExpenseEdit() { resetExpenseForm(); }
+
+  function resetExpenseForm() {
+    state.editingExpId = null;
+    document.getElementById('exp-date').value = toYYYYMMDD(new Date());
+    document.getElementById('exp-category').value = 'Meat';
+    document.getElementById('exp-desc').value = '';
+    document.getElementById('exp-amount').value = '';
+    document.getElementById('exp-payment').value = 'Cash';
+    document.getElementById('exp-notes').value = '';
+    document.getElementById('exp-form-title').textContent = 'Add New Expense';
+    document.getElementById('btn-save-exp').textContent = 'Save Expense';
+    document.getElementById('btn-cancel-exp').style.display = 'none';
+  }
+
+  function renderExpenses() {
+    var fDate = document.getElementById('filter-exp-date').value;
+    var fCat = document.getElementById('filter-exp-cat').value;
+    
+    var filtered = state.expenses.filter(function(e) {
+      return (!fDate || e.date === fDate) && (fCat === 'All' || e.category === fCat);
+    });
+
+    var total = filtered.reduce(function(sum, e){ return sum + e.amount; }, 0);
+    document.getElementById('exp-total-display').textContent = 'Total: ' + fmt(total);
+
+    var list = document.getElementById('expenses-list');
+    if(!filtered.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);">No expenses match filters</div>'; return; }
+    
+    filtered.sort(function(a,b){ return a.date === b.date ? (a.id < b.id ? 1 : -1) : (a.date < b.date ? 1 : -1); });
+
+    list.innerHTML = filtered.map(function(e) {
+      return '<div class="expense-entry"><div class="expense-top"><span class="expense-cat">' + esc(e.category) + '</span><span class="expense-amt">' + fmt(e.amount) + '</span></div>'
+        + '<div class="expense-desc">' + esc(e.desc) + '</div>'
+        + '<div class="expense-meta"><span>' + e.date + ' | ' + (e.payment||'Cash') + '</span><span>' + (e.notes ? 'Notes: '+esc(e.notes) : '') + '</span></div>'
+        + '<div class="expense-actions"><button class="btn-edit" onclick="App.editExpense(\''+e.id+'\')">Edit</button><button class="btn-delete" onclick="App.deleteExpense(\''+e.id+'\')">Delete</button></div></div>';
+    }).join('');
+  }
+
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  // FIX: Added lazy loading check
+  function openCalendar() {
+    if (!heavyDataLoaded) { loadHeavyData(openCalendar); return; }
+
+    state.calDate = new Date(); 
+    document.getElementById('cal-day-details').style.display = 'none';
+    renderCalendar();
+    openModal('calendar-modal');
+  }
+
+  function changeMonth(delta) {
+    state.calDate.setMonth(state.calDate.getMonth() + delta);
+    document.getElementById('cal-day-details').style.display = 'none';
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    var year = state.calDate.getFullYear();
+    var month = state.calDate.getMonth();
+    document.getElementById('cal-month-year').textContent = months[month] + ' ' + year;
+
+    var firstDay = new Date(year, month, 1).getDay(); 
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    var monthSales = 0, monthExp = 0, monthOrders = 0;
+    
+    var dailyData = {}; 
+    for(var d=1; d<=daysInMonth; d++) dailyData[d] = { sales: 0, exp: 0, profit: 0, orders: 0 };
+
+    state.sales.forEach(function(s) {
+      var d = new Date(s.timestamp);
+      if(d.getFullYear() === year && d.getMonth() === month) {
+        var day = d.getDate();
+        dailyData[day].sales += s.total;
+        dailyData[day].orders += 1;
+        monthSales += s.total;
+        monthOrders++;
+      }
+    });
+
+    state.expenses.forEach(function(e) {
+      var parts = e.date.split('-'); 
+      if(parts.length === 3 && parseInt(parts[0]) === year && parseInt(parts[1])-1 === month) {
+        var day = parseInt(parts[2], 10);
+        dailyData[day].exp += e.amount;
+        monthExp += e.amount;
+      }
+    });
+
+    var grid = document.getElementById('cal-grid');
+    var headers = '<div class="cal-day-header">Sun</div><div class="cal-day-header">Mon</div><div class="cal-day-header">Tue</div><div class="cal-day-header">Wed</div><div class="cal-day-header">Thu</div><div class="cal-day-header">Fri</div><div class="cal-day-header">Sat</div>';
+    var html = headers;
+    
+    for(var i=0; i<firstDay; i++) { html += '<div class="cal-day none"></div>'; }
+    
+    for(var d=1; d<=daysInMonth; d++) {
+      dailyData[d].profit = dailyData[d].sales - dailyData[d].exp;
+      var hasData = dailyData[d].sales > 0 || dailyData[d].exp > 0;
+      var cls = hasData ? (dailyData[d].profit >= 0 ? 'profit' : 'loss') : 'none';
+      html += '<div class="cal-day ' + cls + '" id="cal-day-'+d+'" onclick="App.showDayDetails('+year+','+month+','+d+')">' + d + '</div>';
+    }
+    grid.innerHTML = html;
+
+    var net = monthSales - monthExp;
+    document.getElementById('cal-monthly-stats').innerHTML = 
+      '<div class="stat-box"><div class="lbl">Monthly Sales</div><div class="val" style="color:var(--info)">'+fmt(monthSales)+'</div></div>' +
+      '<div class="stat-box"><div class="lbl">Monthly Expenses</div><div class="val text-danger">'+fmt(monthExp)+'</div></div>' +
+      '<div class="stat-box '+(net>=0?'profit-box':'loss-box')+'"><div class="lbl">Net Profit</div><div class="val '+(net>=0?'profit-text':'loss-text')+'">'+fmt(net)+'</div></div>' +
+      '<div class="stat-box"><div class="lbl">Total Orders</div><div class="val">'+monthOrders+'</div></div>';
+  }
+
+  function showDayDetails(y, m, d) {
+    document.querySelectorAll('.cal-day').forEach(function(el){ el.classList.remove('active'); });
+    var clicked = document.getElementById('cal-day-'+d);
+    if(clicked) clicked.classList.add('active');
+
+    var dateStr = y + '-' + pad(m+1) + '-' + pad(d);
+    
+    var daySalesTotal = 0, dayOrders = 0, itemsMap = {};
+    var daySalesArr = state.sales.filter(function(s) { return tsToYYYYMMDD(s.timestamp) === dateStr; });
+    
+    daySalesArr.forEach(function(s) {
+      daySalesTotal += s.total;
+      dayOrders++;
+      s.items.forEach(function(i) { itemsMap[i.name] = (itemsMap[i.name]||0) + i.qty; });
+    });
+
+    var dayExpTotal = 0;
+    var dayExpArr = state.expenses.filter(function(e) { return e.date === dateStr; });
+    dayExpArr.forEach(function(e) { dayExpTotal += e.amount; });
+
+    var net = daySalesTotal - dayExpTotal;
+
+    document.getElementById('det-title').textContent = 'Details for ' + dateStr;
+    document.getElementById('det-sales').textContent = fmt(daySalesTotal);
+    document.getElementById('det-exp').textContent = fmt(dayExpTotal);
+    
+    var elNet = document.getElementById('det-net');
+    elNet.textContent = fmt(net);
+    elNet.className = 'val ' + (net >= 0 ? 'profit-text' : 'loss-text');
+    document.getElementById('det-orders').textContent = dayOrders;
+
+    var bs = Object.keys(itemsMap).map(function(k){ return {name:k, qty:itemsMap[k]}; }).sort(function(a,b){return b.qty-a.qty;}).slice(0,5);
+    var bsHtml = bs.length ? '<div class="best-sellers-title">Best Selling Items</div>' + bs.map(function(i){ return '<div class="best-seller-item"><span>'+esc(i.name)+'</span><b>x'+i.qty+'</b></div>'; }).join('') : '';
+    document.getElementById('det-best-sellers').innerHTML = bsHtml;
+
+    var exHtml = dayExpArr.length ? '<div class="best-sellers-title">Expenses Breakdown</div>' + dayExpArr.map(function(e){ return '<div class="best-seller-item"><span>'+esc(e.category)+': '+esc(e.desc)+'</span><b style="color:var(--danger);">'+fmt(e.amount)+'</b></div>'; }).join('') : '<div class="best-sellers-title">No expenses this day.</div>';
+    document.getElementById('det-exp-list').innerHTML = exHtml;
+    
+    document.getElementById('det-actions').innerHTML = '<button class="btn-primary" style="background:var(--success); font-size:0.85rem; padding:8px;" onclick="App.addManualSaleForDate(\''+dateStr+'\')">+ Add Missed Sale</button>'
+      + '<button class="btn-primary" style="background:var(--purple); font-size:0.85rem; padding:8px;" onclick="App.openExpensesForDate(\''+dateStr+'\')">+ Add Missed Expense</button>';
+
+    document.getElementById('cal-day-details').style.display = 'block';
+    document.getElementById('cal-day-details').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  }
+
+  function openModal(id) { var el = document.getElementById(id); if (el) el.classList.add('open'); }
+  function closeModal(id) { var el = document.getElementById(id); if (el) el.classList.remove('open'); }
+  function showToast(msg) { var el = document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(function(){el.classList.remove('show');},2000); }
+  function esc(s) { return String(s||'').replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]; }); }
+
+  function init() {
+    applyLogo(); renderCategoryBar(); renderMenu(); renderCart();
+    document.addEventListener('click', function(e) { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+  return {
+    filterCategory: filterCategory, searchMenu: searchMenu, addToCart: addToCart, changeQty: changeQty, removeFromCart: removeFromCart, clearCart: clearCart, updateChange: updateChange, checkout: checkout,
+    printReceipt: printReceipt, newOrder: newOrder, logout: logout,
+    openSales: openSales, clearSales: clearSales, deleteSale: deleteSale, printReport: printReport,
+    openAdmin: openAdmin, adminTab: adminTab, handleImageUpload: handleImageUpload, handleLogoUpload: handleLogoUpload, clearLogo: clearLogo, saveItem: saveItem, cancelEdit: cancelEdit, deleteItem: deleteItem, moveItem: moveItem, saveMenuOrder: saveMenuOrder, editItem: editItem, addCategory: addCategory, deleteCategory: deleteCategory,
+    openExpenses: openExpenses, saveExpense: saveExpense, editExpense: editExpense, deleteExpense: deleteExpense, cancelExpenseEdit: cancelExpenseEdit, renderExpenses: renderExpenses,
+    openCalendar: openCalendar, changeMonth: changeMonth, showDayDetails: showDayDetails, openExpensesForDate: openExpensesForDate, addManualSaleForDate: addManualSaleForDate, closeModal: closeModal
+  };
+})();
+</script>
+</body>
+</html>
