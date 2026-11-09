@@ -725,11 +725,11 @@ const firebaseConfig = {
   var heavyDataLoaded = false;
 
     var DEFAULT_MENU = [
-    { id: 'meat-doner',      name: 'Meat Doner',           price: 4500, category: 'Doner',  img: '', emoji: '🥙' },
-    { id: 'chicken-doner',   name: 'Chicken Doner',        price: 3500, category: 'Doner',  img: '', emoji: '🥙' },
-    { id: 'mixed-doner',     name: 'Mixed Doner',          price: 5000, category: 'Doner',  img: '', emoji: '🥙' },
-    { id: 'lezzoo-chicken',  name: 'Lezzoo Chicken Doner', price: 3330, category: 'Doner',  img: '', emoji: '🥙' },
-    { id: 'lezzoo-meat',     name: 'Lezzoo Meat Doner',    price: 4070, category: 'Doner',  img: '', emoji: '🥙' },
+    { id: 'meat-doner',      name: 'Meat Doner',           price: 4500, category: 'Döner',  img: '', emoji: '🥙' },
+    { id: 'chicken-doner',   name: 'Chicken Doner',        price: 3500, category: 'Döner',  img: '', emoji: '🥙' },
+    { id: 'mixed-doner',     name: 'Mixed Doner',          price: 5000, category: 'Döner',  img: '', emoji: '🥙' },
+    { id: 'lezzoo-chicken',  name: 'Lezzoo Chicken Doner', price: 3330, category: 'Döner',  img: '', emoji: '🥙' },
+    { id: 'lezzoo-meat',     name: 'Lezzoo Meat Doner',    price: 4070, category: 'Döner',  img: '', emoji: '🥙' },
     { id: 'fries',           name: 'Fries',                price: 3000, category: 'Extras', img: '', emoji: '🍟' },
     { id: 'lezzoo-fries',    name: 'Lezzoo Fries',         price: 2220, category: 'Extras', img: '', emoji: '🍟' },
     { id: 'soft-drink',      name: 'Soft Drink',           price: 500,  category: 'Drinks', img: '', emoji: '🥤' },
@@ -749,6 +749,7 @@ const firebaseConfig = {
     state.logo = 'logo.PNG';
 
     db.collection('menu').onSnapshot(function(snapshot) {
+      if (snapshot.empty) seedDefaultMenu();
       state.menu = [];
       snapshot.forEach(function(doc) {
         state.menu.push(doc.data());
@@ -773,6 +774,24 @@ const firebaseConfig = {
       renderCatChips();
       populateCategorySelect();
     });
+  }
+
+  // First run on a fresh database: add the default menu once.
+  // A settings/seed flag makes sure it never re-adds items the owner deleted.
+  var seedChecked = false;
+  function seedDefaultMenu() {
+    if (seedChecked) return;
+    seedChecked = true;
+    var flagRef = db.collection('settings').doc('seed');
+    flagRef.get().then(function(doc) {
+      if (doc.exists) return;
+      var batch = db.batch();
+      DEFAULT_MENU.forEach(function(item, i) {
+        batch.set(db.collection('menu').doc(item.id), Object.assign({}, item, { sortOrder: i }));
+      });
+      batch.set(flagRef, { defaultMenuAdded: true, at: Date.now() });
+      return batch.commit().then(function() { showToast('Default menu added'); });
+    }).catch(function(e) { console.error('Seeding failed', e); });
   }
 
   // FIX: New function to load heavy history only when asked
